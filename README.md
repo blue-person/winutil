@@ -20,21 +20,8 @@ Winutil must be run in Admin mode because it performs system-wide tweaks. To ach
 
 ### Launch Command
 
-#### Simple way
-
 ```
-iwr -useb https://christitus.com/win | iex
-```
-or by executing: 
-```
-irm https://christitus.com/win | iex
-```
-Courtesy of the issue raised at: [#144](/../../issues/144)
-
-if for some reason this site is not reachable from your country please try running it directly from github
-
-```
-irm https://raw.githubusercontent.com/ChrisTitusTech/winutil/main/winutil.ps1 | iex
+irm https://raw.githubusercontent.com/blue-person/winutil/main/winutil.ps1 | iex
 ```
 
 #### Automation
