@@ -1,13 +1,13 @@
 # Chris Titus Tech's Windows Utility
 
-Este programa, desarrollado por [Chris Titus](https://christitus.com), es una herramienta que encuentro muy útil, aunque hay aspectos que me gustaría personalizar según mis necesidades. Por ello, he creado este repositorio para realizar las modificaciones que necesite.
+This program, developed by [Chris Titus](https://christitus.com), is a tool that I find very useful, although there are aspects I would like to customize to fit my needs. That's why I've created this repository to make the necessary modifications.
 
-### Comando para iniciar
+### Command to initiate
 
 ```
 irm https://raw.githubusercontent.com/blue-person/winutil/main/winutil.ps1 | iex
 ```
 
-## Soporte:
+## Support:
 
-Para obtener soporte o ayuda, lo ideal es dirigirse al [repositorio oficial](https://github.com/ChrisTitusTech/winutil), donde se encuentra la versión más actualizada del código y donde se ofrecen recursos y documentación oficial.
+For support or assistance, it's best to head to the [official repository](https://github.com/ChrisTitusTech/winutil), where the most updated version of the code is located, and where official resources and documentation are provided.
