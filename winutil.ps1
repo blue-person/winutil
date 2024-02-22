@@ -483,7 +483,6 @@ function Get-WinUtilVariables {
     }
     return $keys
 }
-
 Function Install-WinUtilProgramWinget {
 
     <#
