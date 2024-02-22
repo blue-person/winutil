@@ -2,7 +2,7 @@
 
 This program, developed by [Chris Titus](https://christitus.com), is a tool that I find very useful, although there are aspects I would like to customize to fit my needs. That's why I've created this repository to make the necessary modifications.
 
-### Command to initiate
+### Launch command
 
 ```
 irm https://raw.githubusercontent.com/blue-person/winutil/main/winutil.ps1 | iex
