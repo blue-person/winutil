@@ -10,7 +10,7 @@
     Author         : Chris Titus @christitustech
     Runspace Author: @DeveloperDurp
     GitHub         : https://github.com/ChrisTitusTech
-    Version        : 24.02.03
+    Version        : 24.02.20
 #>
 param (
     [switch]$Debug,
@@ -47,7 +47,7 @@ Add-Type -AssemblyName System.Windows.Forms
 # Variable to sync between runspaces
 $sync = [Hashtable]::Synchronized(@{})
 $sync.PSScriptRoot = $PSScriptRoot
-$sync.version = "24.02.03"
+$sync.version = "24.02.20"
 $sync.configs = @{}
 $sync.ProcessRunning = $false
 
@@ -241,9 +241,9 @@ function Get-Oscdimg {
         Get-Oscdimg
     #>
     param( [Parameter(Mandatory=$true)] 
-        $oscdimgPath = "$env:TEMP\oscdimg.exe"
+        [string]$oscdimgPath
     )
-    
+    $oscdimgPath = "$env:TEMP\oscdimg.exe"
     $downloadUrl = "https://github.com/ChrisTitusTech/winutil/raw/main/releases/oscdimg.exe"
     Invoke-RestMethod -Uri $downloadUrl -OutFile $oscdimgPath
     $hashResult = Get-FileHash -Path $oscdimgPath -Algorithm SHA256
@@ -358,38 +358,6 @@ function Get-WinUtilInstallerProcess {
         return $true
     }
     return $false
-}
-function Get-WinUtilRegistry {
-    <#
-
-    .SYNOPSIS
-        Gets the value of a registry key
-
-    .EXAMPLE
-        Get-WinUtilRegistry -Name "PublishUserActivities" -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Type "DWord" -Value "0"
-
-    #>
-    param (
-        $Name,
-        $Path,
-        $Type,
-        $Value
-    )
-
-    Try{
-        $syscheckvalue = Get-ItemPropertyValue -Path $Path -Value $Value # Return Value
-
-    }
-    Catch [System.Security.SecurityException] {
-        Write-Warning "Unable to set $Path\$Name to $Value due to a Security Exception"
-    }
-    Catch [System.Management.Automation.ItemNotFoundException] {
-        Write-Warning $psitem.Exception.ErrorRecord
-    }
-    Catch{
-        Write-Warning "Unable to set $Name due to unhandled exception"
-        Write-Warning $psitem.Exception.StackTrace
-    }
 }
 Function Get-WinUtilToggleStatus {
     <#
@@ -527,7 +495,7 @@ function Install-WinUtilChoco {
     try {
         Write-Host "Checking if Chocolatey is Installed..."
 
-        if((Test-WinUtilPackageManager -choco)){
+        if((Get-Command -Name choco -ErrorAction Ignore)) {
             Write-Host "Chocolatey Already Installed"
             return
         }
@@ -654,7 +622,7 @@ function Invoke-MicroWin-Helper {
 
 }
 
-function Is-CompatibleImage() {
+function Test-CompatibleImage() {
 <#
 
     .SYNOPSIS
@@ -2313,14 +2281,34 @@ function Test-WinUtilPackageManager {
         [System.Management.Automation.SwitchParameter]$choco
     )
 
-    if($winget){
-        if (Test-Path ~\AppData\Local\Microsoft\WindowsApps\winget.exe) {
+    # Install Winget if not detected
+    $wingetExists = Get-Command -Name winget -ErrorAction SilentlyContinue
+    if ($wingetExists) {
+        $wingetVersion = [System.Version]::Parse((winget --version).Trim('v'))
+        $minimumWingetVersion = [System.Version]::new(1,2,10691) # Win 11 23H2 comes with bad winget v1.2.10691
+        $wingetOutdated = $wingetVersion -le $minimumWingetVersion
+        
+        Write-Host "Winget v$wingetVersion"
+    }
+
+    if (!$wingetExists -or $wingetOutdated) {
+        if (!$wingetExists) {
+            Write-Host "Winget not detected"
+        } else {
+            Write-Host "- Winget out-dated"
+        } 
+    }
+
+    if ($winget) {
+        if ($wingetExists -and !$wingetOutdated) {
+            Write-Host "- Winget up-to-date"
             return $true
         }
     }
 
     if($choco){
         if ((Get-Command -Name choco -ErrorAction Ignore) -and ($chocoVersion = (Get-Item "$env:ChocolateyInstall\choco.exe" -ErrorAction Ignore).VersionInfo.ProductVersion)){
+            Write-Host "Chocolatey v$chocoVersion"
             return $true
         }
     }
@@ -2364,7 +2352,6 @@ function Invoke-ScratchDialog {
     [System.Reflection.Assembly]::LoadWithPartialName("System.windows.forms") | Out-Null
     $Dialog = New-Object System.Windows.Forms.FolderBrowserDialog
     $Dialog.SelectedPath =          $sync.MicrowinScratchDirBox.Text
-    $DialogShowNewFolderButton = $true
     $Dialog.ShowDialog() 
     $filePath = $Dialog.SelectedPath
         Write-Host "No ISO is chosen+  $filePath"
@@ -2888,7 +2875,7 @@ function Invoke-WPFGetInstalled {
         return
     }
 
-    if(!(Test-WinUtilPackageManager -winget) -and $checkbox -eq "winget"){
+    if(!(Get-Command -Name winget -ErrorAction SilentlyContinue) -and $checkbox -eq "winget"){
         Write-Host "==========================================="
         Write-Host "--       Winget is not installed        ---"
         Write-Host "==========================================="
@@ -3222,7 +3209,7 @@ function Invoke-WPFInstall {
         }
         Catch {
             Write-Host "==========================================="
-            Write-Host "--      Winget failed to install        ---"
+            Write-Host "Error: $_"
             Write-Host "==========================================="
         }
         Start-Sleep -Seconds 5
@@ -3236,7 +3223,7 @@ function Invoke-WPFInstallUpgrade {
         Invokes the function that upgrades all installed programs using winget
 
     #>
-    if(!(Test-WinUtilPackageManager -winget)){
+    if(!(Get-Command -Name winget -ErrorAction SilentlyContinue)){
         Write-Host "==========================================="
         Write-Host "--       Winget is not installed        ---"
         Write-Host "==========================================="
@@ -3318,7 +3305,7 @@ public class PowerManagement {
     $imgVersion = (Get-WindowsImage -ImagePath $mountDir\sources\install.wim -Index $index).Version
 
     # Detect image version to avoid performing MicroWin processing on Windows 8 and earlier
-    if ((Is-CompatibleImage $imgVersion) -eq $false)
+    if ((Test-CompatibleImage $imgVersion) -eq $false)
     {
 		$msg = "This image is not compatible with MicroWin processing. Make sure it isn't a Windows 8 or earlier image."
         $dlg_msg = $msg + "`n`nIf you want more information, the version of the image selected is $($imgVersion)`n`nIf an image has been incorrectly marked as incompatible, report an issue to the developers."
@@ -3881,7 +3868,7 @@ function Invoke-WPFShortcut {
     $Shortcut = $WshShell.CreateShortcut($FileBrowser.FileName)
     $Shortcut.TargetPath = $SourceExe
     $Shortcut.Arguments = $ArgumentsToSourceExe
-    if ($iconPath -ne $null) {
+    if ($null -ne $iconPath) {
         $shortcut.IconLocation = $iconPath
     }
     $Shortcut.Save()
@@ -5739,7 +5726,7 @@ $sync.configs.applications = '{
 		"choco": "devToys",
 		"content": "Devtoys",
 		"description": "Devtoys is a collection of development-related utilities and tools for Windows. It includes tools for file management, code formatting, and productivity enhancements for developers.",
-		"link": "https://dev.to/devtoys",
+		"link": "https://devtoys.app/",
 		"winget": "devtoys"
 	},
 	"WPFInstalldigikam": {
@@ -6748,7 +6735,7 @@ $sync.configs.applications = '{
 		"content": "Parsec",
 		"description": "Parsec is a low-latency, high-quality remote desktop sharing application for collaborating and gaming across devices.",
 		"link": "https://parsec.app/",
-		"winget": "Parsec.parsec"
+		"winget": "Parsec.Parsec"
 	},
 	"WPFInstallpdf24creator": {
 		"category": "Document",
@@ -7660,7 +7647,6 @@ $sync.configs.applications = '{
 		"content": "Miniconda",
 		"description": "Miniconda is a free minimal installer for conda. It is a small bootstrap version of Anaconda that includes only conda, Python, the packages they both depend on, and a small number of other useful packages (like pip, zlib, and a few others).",
 		"link": "https://docs.conda.io/projects/miniconda",
-		"panel": "1",
 		"winget": "Anaconda.Miniconda3"
 	},
 	"WPFInstalltemurin": {
@@ -7669,7 +7655,6 @@ $sync.configs.applications = '{
 		"content": "Eclipse Temurin",
 		"description": "Eclipse Temurin is the open source Java SE build based upon OpenJDK.",
 		"link": "https://adoptium.net/temurin/",
-		"panel": "1",
 		"winget": "EclipseAdoptium.Temurin.21.JDK"
 	},
 	"WPFInstallintelpresentmon": {
@@ -7678,7 +7663,6 @@ $sync.configs.applications = '{
 		"content": "Intel?? PresentMon",
 		"description": "A new gaming performance overlay and telemetry application to monitor and measure your gaming experience.",
 		"link": "https://game.intel.com/us/stories/intel-presentmon/",
-		"panel": "4",
 		"winget": "Intel.PresentMon.Beta"
 	},
 	"WPFInstallpyenvwin": {
@@ -7687,7 +7671,6 @@ $sync.configs.applications = '{
 		"content": "Python Version Manager (pyenv-win)",
 		"description": "pyenv for Windows is a simple python version management tool. It lets you easily switch between multiple versions of Python.",
 		"link": "https://pyenv-win.github.io/pyenv-win/",
-		"panel": "1",
 		"winget": "na"
 	}
 }' | convertfrom-json
