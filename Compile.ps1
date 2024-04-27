@@ -1,6 +1,9 @@
 $OFS = "`r`n"
 $scriptname = "winutil.ps1"
-
+# Variable to sync between runspaces
+$sync = [Hashtable]::Synchronized(@{})
+$sync.PSScriptRoot = $PSScriptRoot
+$sync.configs = @{}
 
 if (Test-Path -Path "$($scriptname)")
 {
@@ -21,15 +24,66 @@ Get-ChildItem .\functions -Recurse -File | ForEach-Object {
     Get-Content $psitem.FullName | Out-File ./$scriptname -Append -Encoding ascii
 }
 
-Get-ChildItem .\xaml | ForEach-Object {
-    $xaml = (Get-Content $psitem.FullName).replace("'","''")
-    Write-output "`$$($psitem.BaseName) = '$xaml'" | Out-File ./$scriptname -Append -Encoding ascii
-}
-
 Get-ChildItem .\config | Where-Object {$psitem.extension -eq ".json"} | ForEach-Object {
     $json = (Get-Content $psitem.FullName).replace("'","''")
 
+    # Replace every XML Special Character so it'll render correctly in final build
+    # Only do so if json files has content to be displayed (for example the applications, tweaks, features json files)
+        # Some Type Convertion using Casting and Cleaning Up of the convertion result using 'Replace' Method
+        $jsonAsObject = $json | convertfrom-json
+        $firstLevelJsonList = ([System.String]$jsonAsObject).split('=;') | ForEach-Object {
+            $_.Replace('=}','').Replace('@{','').Replace(' ','')
+        }
+
+       for ($i = 0; $i -lt $firstLevelJsonList.Count; $i += 1) {
+            $firstLevelName = $firstLevelJsonList[$i]
+            # Note: Avoid using HTML Entity Codes (for example '&rdquo;' (stands for "Right Double Quotation Mark")), and use HTML decimal/hex codes instead.
+	    # as using HTML Entity Codes will result in XML parse Error when running the compiled script.
+	    if ($jsonAsObject.$firstLevelName.content -ne $null) {
+                $jsonAsObject.$firstLevelName.content = $jsonAsObject.$firstLevelName.content.replace('&','&#38;').replace('“','&#8220;').replace('”','&#8221;').replace("'",'&#39;').replace('<','&#60;').replace('>','&#62;')
+                $jsonAsObject.$firstLevelName.content = $jsonAsObject.$firstLevelName.content.replace('&#39;&#39;',"&#39;") # resolves the Double Apostrophe caused by the first replace function in the main loop
+            }
+            if ($jsonAsObject.$firstLevelName.description -ne $null) {
+                $jsonAsObject.$firstLevelName.description = $jsonAsObject.$firstLevelName.description.replace('&','&#38;').replace('“','&#8220;').replace('”','&#8221;').replace("'",'&#39;').replace('<','&#60;').replace('>','&#62;')
+                $jsonAsObject.$firstLevelName.description = $jsonAsObject.$firstLevelName.description.replace('&#39;&#39;',"&#39;") # resolves the Double Apostrophe caused by the first replace function in the main loop
+	    }
+	}
+	# The replace at the end is required, as without it the output of converto-json will be somewhat weird for Multiline String
+	# Most Notably is the scripts in json files, make=ing it harder for users who want to review these scripts that are found in the final compiled script
+        $json = ($jsonAsObject | convertto-json -Depth 3).replace('\r\n',"`r`n")
+
+    $sync.configs.$($psitem.BaseName) = $json | convertfrom-json
     Write-output "`$sync.configs.$($psitem.BaseName) = '$json' `| convertfrom-json" | Out-File ./$scriptname -Append -Encoding ascii
 }
+
+$xaml = (Get-Content .\xaml\inputXML.xaml).replace("'","''")
+
+# Dot-source the Get-TabXaml function
+. .\functions\private\Get-TabXaml.ps1
+
+## Xaml Manipulation
+$tabColumns = Get-TabXaml "applications" 5
+$tabColumns | Out-File -FilePath ".\xaml\inputApp.xaml" -Encoding ascii
+$tabColumns = Get-TabXaml "tweaks"
+$tabColumns | Out-File -FilePath ".\xaml\inputTweaks.xaml" -Encoding ascii
+$tabColumns = Get-TabXaml "feature"
+$tabColumns | Out-File -FilePath ".\xaml\inputFeatures.xaml" -Encoding ascii
+
+# Assuming inputApp.xaml is in the same directory as main.ps1
+$appXamlPath = Join-Path -Path $PSScriptRoot -ChildPath "xaml/inputApp.xaml"
+$tweaksXamlPath = Join-Path -Path $PSScriptRoot -ChildPath "xaml/inputTweaks.xaml"
+$featuresXamlPath = Join-Path -Path $PSScriptRoot -ChildPath "xaml/inputFeatures.xaml"
+
+# Load the XAML content from inputApp.xaml
+$appXamlContent = Get-Content -Path $appXamlPath -Raw
+$tweaksXamlContent = Get-Content -Path $tweaksXamlPath -Raw
+$featuresXamlContent = Get-Content -Path $featuresXamlPath -Raw
+
+# Replace the placeholder in $inputXML with the content of inputApp.xaml
+$xaml = $xaml -replace "{{InstallPanel_applications}}", $appXamlContent
+$xaml = $xaml -replace "{{InstallPanel_tweaks}}", $tweaksXamlContent
+$xaml = $xaml -replace "{{InstallPanel_features}}", $featuresXamlContent
+
+Write-output "`$inputXML =  '$xaml'" | Out-File ./$scriptname -Append -Encoding ascii
 
 Get-Content .\scripts\main.ps1 | Out-File ./$scriptname -Append -Encoding ascii
