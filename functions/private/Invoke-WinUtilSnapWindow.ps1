@@ -1,22 +1,22 @@
-Function Invoke-WinUtilStickyKeys {
+function Invoke-WinUtilSnapWindow {
     <#
     .SYNOPSIS
-        Disables/Enables Sticky Keyss on startup
+        Disables/Enables Snapping Windows on startup
     .PARAMETER Enabled
-        Indicates whether to enable or disable Sticky Keys on startup
+        Indicates whether to enable or disable Snapping Windows on startup
     #>
     Param($Enabled)
-    Try { 
+    Try{
         if ($Enabled -eq $false){
-            Write-Host "Enabling Sticky Keys On startup"
-            $value = 510
+            Write-Host "Enabling Snap Windows On startup | Relogin Required"
+            $value = 1
         }
         else {
-            Write-Host "Disabling Sticky Keys On startup"
-            $value = 58
+            Write-Host "Disabling Snap Windows On startup | Relogin Required"
+            $value = 0
         }
-        $Path = "HKCU:\Control Panel\Accessibility\StickyKeys"
-        Set-ItemProperty -Path $Path -Name Flags -Value $value
+        $Path = "HKCU:\Control Panel\Desktop"
+        Set-ItemProperty -Path $Path -Name WindowArrangementActive -Value $value
     }
     Catch [System.Security.SecurityException] {
         Write-Warning "Unable to set $Path\$Name to $Value due to a Security Exception"
