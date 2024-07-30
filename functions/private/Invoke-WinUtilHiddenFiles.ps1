@@ -1,22 +1,25 @@
-Function Invoke-WinUtilStickyKeys {
+function Invoke-WinUtilHiddenFiles {
     <#
+
     .SYNOPSIS
-        Disables/Enables Sticky Keyss on startup
+        Enable/Disable Hidden Files
+
     .PARAMETER Enabled
-        Indicates whether to enable or disable Sticky Keys on startup
+        Indicates whether to enable or disable Hidden Files
+
     #>
     Param($Enabled)
-    Try {
+    Try{
         if ($Enabled -eq $false){
-            Write-Host "Enabling Sticky Keys On startup"
-            $value = 510
+            Write-Host "Enabling Hidden Files"
+            $value = 1
         }
         else {
-            Write-Host "Disabling Sticky Keys On startup"
-            $value = 58
+            Write-Host "Disabling Hidden Files"
+            $value = 0
         }
-        $Path = "HKCU:\Control Panel\Accessibility\StickyKeys"
-        Set-ItemProperty -Path $Path -Name Flags -Value $value
+        $Path = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Set-ItemProperty -Path $Path -Name Hidden -Value $value
     }
     Catch [System.Security.SecurityException] {
         Write-Warning "Unable to set $Path\$Name to $Value due to a Security Exception"

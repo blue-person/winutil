@@ -4,6 +4,7 @@ function Invoke-WPFMicrowin {
         Invoke MicroWin routines...
     #>
 
+
 	if($sync.ProcessRunning) {
         $msg = "GetIso process is currently running."
         [System.Windows.MessageBox]::Show($msg, "Winutil", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
@@ -39,8 +40,11 @@ public class PowerManagement {
 
     if ($SaveDialog.FileName -eq "") {
         Write-Host "No file name for the target image was specified"
+		Set-WinUtilTaskbaritem -state "Error" -value 1 -overlay "warning"
         return
     }
+
+	Set-WinUtilTaskbaritem -state "Indeterminate" -overlay "logo"
 
     Write-Host "Target ISO location: $($SaveDialog.FileName)"
 
@@ -74,6 +78,7 @@ public class PowerManagement {
             $msg = "The export process has failed and MicroWin processing cannot continue"
             Write-Host "Failed to export the image"
             [System.Windows.MessageBox]::Show($msg, "Winutil", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
+			Set-WinUtilTaskbaritem -state "Error" -value 1 -overlay "warning"
             return
 		}
 	}
@@ -87,14 +92,16 @@ public class PowerManagement {
         $dlg_msg = $msg + "`n`nIf you want more information, the version of the image selected is $($imgVersion)`n`nIf an image has been incorrectly marked as incompatible, report an issue to the developers."
 		Write-Host $msg
 		[System.Windows.MessageBox]::Show($dlg_msg, "Winutil", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Exclamation)
+		Set-WinUtilTaskbaritem -state "Error" -value 1 -overlay "warning"
         return
     }
 
 	$mountDirExists = Test-Path $mountDir
     $scratchDirExists = Test-Path $scratchDir
-	if (-not $mountDirExists -or -not $scratchDirExists) 
+	if (-not $mountDirExists -or -not $scratchDirExists)
 	{
         Write-Error "Required directories '$mountDirExists' '$scratchDirExists' and do not exist."
+		Set-WinUtilTaskbaritem -state "Error" -value 1 -overlay "warning"
         return
     }
 
@@ -109,6 +116,7 @@ public class PowerManagement {
         else
         {
             Write-Host "Could not mount image. Exiting..."
+			Set-WinUtilTaskbaritem -state "Error" -value 1 -overlay "warning"
             return
         }
 
@@ -149,7 +157,7 @@ public class PowerManagement {
 				if (Test-Path "$env:TEMP\DRV_EXPORT")
 				{
 					Remove-Item "$env:TEMP\DRV_EXPORT" -Recurse -Force
-				}				
+				}
 			}
 		}
 
@@ -161,7 +169,7 @@ public class PowerManagement {
 				Write-Host "Adding Windows Drivers image($scratchDir) drivers($driverPath) "
 				dism /English /image:$scratchDir /add-driver /driver:$driverPath /recurse | Out-Host
 			}
-			else 
+			else
 			{
 				Write-Host "Path to drivers is invalid continuing without driver injection"
 			}
@@ -171,23 +179,24 @@ public class PowerManagement {
 		Remove-Features -keepDefender:$keepDefender
 		Write-Host "Removing features complete!"
 
-		Write-Host "Removing Appx Bloat"
 		if (!$keepPackages)
 		{
+			Write-Host "Removing OS packages"
 			Remove-Packages
 		}
 		if (!$keepProvisionedPackages)
 		{
+			Write-Host "Removing Appx Bloat"
 			Remove-ProvisionedPackages -keepSecurity:$keepDefender
 		}
 
 		# special code, for some reason when you try to delete some inbox apps
-		# we have to get and delete log files directory. 
+		# we have to get and delete log files directory.
 		Remove-FileOrDirectory -pathToDelete "$($scratchDir)\Windows\System32\LogFiles\WMI\RtBackup" -Directory
 		Remove-FileOrDirectory -pathToDelete "$($scratchDir)\Windows\System32\WebThreatDefSvc" -Directory
 
 		# Defender is hidden in 2 places we removed a feature above now need to remove it from the disk
-		if (!$keepDefender) 
+		if (!$keepDefender)
 		{
 			Write-Host "Removing Defender"
 			Remove-FileOrDirectory -pathToDelete "$($scratchDir)\Program Files\Windows Defender" -Directory
@@ -204,7 +213,7 @@ public class PowerManagement {
 		Remove-FileOrDirectory -pathToDelete "$($scratchDir)\Windows\DiagTrack" -Directory
 		Remove-FileOrDirectory -pathToDelete "$($scratchDir)\Windows\InboxApps" -Directory
 		Remove-FileOrDirectory -pathToDelete "$($scratchDir)\Windows\System32\SecurityHealthSystray.exe"
-		Remove-FileOrDirectory -pathToDelete "$($scratchDir)\Windows\System32\LocationNotificationWindows.exe" 
+		Remove-FileOrDirectory -pathToDelete "$($scratchDir)\Windows\System32\LocationNotificationWindows.exe"
 		Remove-FileOrDirectory -pathToDelete "$($scratchDir)\Program Files (x86)\Windows Photo Viewer" -Directory
 		Remove-FileOrDirectory -pathToDelete "$($scratchDir)\Program Files\Windows Photo Viewer" -Directory
 		Remove-FileOrDirectory -pathToDelete "$($scratchDir)\Program Files (x86)\Windows Media Player" -Directory
@@ -285,7 +294,7 @@ public class PowerManagement {
 		Write-Host "Disabling Teams"
 		reg add "HKLM\zSOFTWARE\Microsoft\Windows\CurrentVersion\Communications" /v "ConfigureChatAutoInstall" /t REG_DWORD /d 0 /f   >$null 2>&1
 		reg add "HKLM\zSOFTWARE\Policies\Microsoft\Windows\Windows Chat" /v ChatIcon /t REG_DWORD /d 2 /f                             >$null 2>&1
-		reg add "HKLM\zNTUSER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "TaskbarMn" /t REG_DWORD /d 0 /f        >$null 2>&1  
+		reg add "HKLM\zNTUSER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "TaskbarMn" /t REG_DWORD /d 0 /f        >$null 2>&1
 		reg query "HKLM\zSOFTWARE\Microsoft\Windows\CurrentVersion\Communications" /v "ConfigureChatAutoInstall"                      >$null 2>&1
 		# Write-Host Error code $LASTEXITCODE
 		Write-Host "Done disabling Teams"
@@ -310,6 +319,19 @@ public class PowerManagement {
 			reg delete "HKLM\zSOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Taskband" /v "Pinned" /f             >$null 2>&1
 			reg delete "HKLM\zSOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Taskband" /v "LayoutCycle" /f        >$null 2>&1
 			Write-Host "Edge icon removed from taskbar"
+			if (Test-Path "HKLM:\zSOFTWARE\WOW6432Node")
+			{
+				# Remove leftovers of 64-bit installations
+				# ---
+				# Remove registry values first...
+				reg delete "HKLM\zSOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft Edge" /va /f > $null 2>&1
+				reg delete "HKLM\zSOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft Edge Update" /va /f > $null 2>&1
+				reg delete "HKLM\zSOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft EdgeWebView" /va /f > $null 2>&1
+				# ...then the registry keys
+				reg delete "HKLM\zSOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft Edge" /f > $null 2>&1
+				reg delete "HKLM\zSOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft Edge Update" /f > $null 2>&1
+				reg delete "HKLM\zSOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft EdgeWebView" /f > $null 2>&1
+			}
 		}
 
 		reg add "HKLM\zSOFTWARE\Microsoft\Windows\CurrentVersion\Search" /v "SearchboxTaskbarMode" /t REG_DWORD /d 0 /f
@@ -327,7 +349,7 @@ public class PowerManagement {
 		reg add "HKLM\zSOFTWARE\Policies\Microsoft\Windows\CloudContent" /v "DisableWindowsConsumerFeatures" /t REG_DWORD /d 1 /f
 		reg add "HKLM\zSOFTWARE\Microsoft\PolicyManager\current\device\Start" /v "ConfigureStartPins" /t REG_SZ /d '{\"pinnedList\": [{}]}' /f
 		Write-Host "Done removing Sponsored Apps"
-		
+
 		Write-Host "Disabling Reserved Storage"
 		reg add "HKLM\zSOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" /v "ShippedWithReserves" /t REG_DWORD /d 0 /f
 
@@ -351,8 +373,8 @@ public class PowerManagement {
 
 		Write-Host "Unmounting image..."
         Dismount-WindowsImage -Path $scratchDir -Save
-	} 
-	
+	}
+
 	try {
 
 		Write-Host "Exporting image into $mountDir\sources\install2.wim"
@@ -364,11 +386,12 @@ public class PowerManagement {
 		if (-not (Test-Path -Path "$mountDir\sources\install.wim"))
 		{
 			Write-Error "Something went wrong and '$mountDir\sources\install.wim' doesn't exist. Please report this bug to the devs"
+			Set-WinUtilTaskbaritem -state "Error" -value 1 -overlay "warning"
 			return
 		}
 		Write-Host "Windows image completed. Continuing with boot.wim."
 
-		# Next step boot image		
+		# Next step boot image
 		Write-Host "Mounting boot image $mountDir\sources\boot.wim into $scratchDir"
         Mount-WindowsImage -ImagePath "$mountDir\sources\boot.wim" -Index 2 -Path "$scratchDir"
 
@@ -380,12 +403,12 @@ public class PowerManagement {
 				Write-Host "Adding Windows Drivers image($scratchDir) drivers($driverPath) "
 				dism /English /image:$scratchDir /add-driver /driver:$driverPath /recurse | Out-Host
 			}
-			else 
+			else
 			{
 				Write-Host "Path to drivers is invalid continuing without driver injection"
 			}
 		}
-	
+
 		Write-Host "Loading registry..."
 		reg load HKLM\zCOMPONENTS "$($scratchDir)\Windows\System32\config\COMPONENTS" >$null
 		reg load HKLM\zDEFAULT "$($scratchDir)\Windows\System32\config\default" >$null
@@ -449,7 +472,7 @@ public class PowerManagement {
 			Copy-ToUSB("$($SaveDialog.FileName)")
 			if ($?) { Write-Host "Done Copying target ISO to USB drive!" } else { Write-Host "ISO copy failed." }
 		}
-		
+
 		Write-Host " _____                       "
 		Write-Host "(____ \                      "
 		Write-Host " _   \ \ ___  ____   ____    "
@@ -465,13 +488,14 @@ public class PowerManagement {
 			#$msg = "Done. ISO image is located here: $env:temp\microwin.iso"
 			$msg = "Done. ISO image is located here: $($SaveDialog.FileName)"
 			Write-Host $msg
+			Set-WinUtilTaskbaritem -state "None" -overlay "checkmark"
 			[System.Windows.MessageBox]::Show($msg, "Winutil", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
 		} else {
 			Write-Host "ISO creation failed. The "$($mountDir)" directory has not been removed."
 		}
-		
+
 		$sync.MicrowinOptionsPanel.Visibility = 'Collapsed'
-		
+
 		#$sync.MicrowinFinalIsoLocation.Text = "$env:temp\microwin.iso"
         $sync.MicrowinFinalIsoLocation.Text = "$($SaveDialog.FileName)"
 		# Allow the machine to sleep again (optional)

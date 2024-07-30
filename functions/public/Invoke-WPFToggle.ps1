@@ -28,5 +28,9 @@ function Invoke-WPFToggle {
         "WPFToggleMouseAcceleration" {Invoke-WinUtilMouseAcceleration $(Get-WinUtilToggleStatus WPFToggleMouseAcceleration)}
         "WPFToggleStickyKeys" {Invoke-WinUtilStickyKeys $(Get-WinUtilToggleStatus WPFToggleStickyKeys)}
         "WPFToggleTaskbarWidgets" {Invoke-WinUtilTaskbarWidgets $(Get-WinUtilToggleStatus WPFToggleTaskbarWidgets)}
+        "WPFToggleTaskbarSearch" {Invoke-WinUtilTaskbarSearch $(Get-WinUtilToggleStatus WPFToggleTaskbarSearch)}
+        "WPFToggleTaskView" {Invoke-WinUtilTaskView $(Get-WinUtilToggleStatus WPFToggleTaskView)}
+        "WPFToggleHiddenFiles" {Invoke-WinUtilHiddenFiles $(Get-WinUtilToggleStatus WPFToggleHiddenFiles)}
+        "WPFToggleTaskbarAlignment" {Invoke-WinUtilTaskbarAlignment $(Get-WinUtilToggleStatus WPFToggleTaskbarAlignment)}
     }
 }

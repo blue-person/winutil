@@ -58,9 +58,9 @@
         "powercfg.exe /hibernate on"
     ]
   },
-  "WPFToggleTweaksLaptopHybernation": {
+  "WPFTweaksLaptopHibernation": {
     "Content": "Set Hibernation as default (good for laptops)",
-    "Description": "Most modern laptops have connected stadby enabled which drains the battery, this sets hibernation as default which will not drain the battery. See issue https://github.com/ChrisTitusTech/winutil/issues/1399",
+    "Description": "Most modern laptops have connected standby enabled which drains the battery, this sets hibernation as default which will not drain the battery. See issue https://github.com/ChrisTitusTech/winutil/issues/1399",
     "category": "Essential Tweaks",
     "panel": "1",
     "Order": "a014_",
@@ -84,7 +84,7 @@
       "
       Write-Host \"Turn on Hibernation\"
       Start-Process -FilePath powercfg -ArgumentList \"/hibernate on\" -NoNewWindow -Wait
-  
+
       # Set hibernation as the default action
       Start-Process -FilePath powercfg -ArgumentList \"/change standby-timeout-ac 60\" -NoNewWindow -Wait
       Start-Process -FilePath powercfg -ArgumentList \"/change standby-timeout-dc 60\" -NoNewWindow -Wait
@@ -96,14 +96,14 @@
       "
       Write-Host \"Turn off Hibernation\"
       Start-Process -FilePath powercfg -ArgumentList \"/hibernate off\" -NoNewWindow -Wait
-  
+
       # Set standby to detault values
       Start-Process -FilePath powercfg -ArgumentList \"/change standby-timeout-ac 15\" -NoNewWindow -Wait
       Start-Process -FilePath powercfg -ArgumentList \"/change standby-timeout-dc 15\" -NoNewWindow -Wait
       Start-Process -FilePath powercfg -ArgumentList \"/change monitor-timeout-ac 15\" -NoNewWindow -Wait
       Start-Process -FilePath powercfg -ArgumentList \"/change monitor-timeout-dc 15\" -NoNewWindow -Wait
       "
-    ]    
+    ]
   },
   "WPFTweaksHome": {
     "Content": "Disable Homegroup",
@@ -1224,11 +1224,6 @@
         "OriginalType": "Automatic"
       },
       {
-        "Name": "WwanSvc",
-        "StartupType": "Manual",
-        "OriginalType": "Manual"
-      },
-      {
         "Name": "XblAuthManager",
         "StartupType": "Manual",
         "OriginalType": "Manual"
@@ -1585,6 +1580,22 @@
       }
     ]
   },
+  "WPFTweaksConsumerFeatures":{
+    "Content": "Disable ConsumerFeatures",
+    "Description": "Windows 10 will not automatically install any games, third-party apps, or application links from the Windows Store for the signed-in user. Some default Apps will be inaccessible (eg. Phone Link)",
+    "category": "Essential Tweaks",
+    "panel": "1",
+    "Order": "a003_",
+    "registry": [
+      {
+      "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent",
+      "OriginalValue": "0",
+      "Name": "DisableWindowsConsumerFeatures",
+      "Value": "1",
+      "Type": "DWord"
+      }
+    ]
+  },
   "WPFTweaksTele": {
     "Content": "Disable Telemetry",
     "Description": "Disables Microsoft Telemetry. Note: This will lock many Edge Browser settings. Microsoft spies heavily on you when using the Edge browser.",
@@ -1741,13 +1752,6 @@
         "OriginalValue": "1",
         "Name": "SystemPaneSuggestionsEnabled",
         "Value": "0",
-        "Type": "DWord"
-      },
-      {
-        "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent",
-        "OriginalValue": "0",
-        "Name": "DisableWindowsConsumerFeatures",
-        "Value": "1",
         "Type": "DWord"
       },
       {
@@ -2002,6 +2006,27 @@
       }
     ]
   },
+  "WPFTweaksRemoveHomeGallery": {
+    "Content": "Remove Home and Gallery from explorer",
+    "Description": "Removes the Home and Gallery from explorer and sets This PC as default",
+    "category": "z__Advanced Tweaks - CAUTION",
+    "panel": "1",
+    "Order": "a029_",
+    "InvokeScript": [
+      "
+      REG DELETE \"HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Desktop\\NameSpace\\{e88865ea-0e1c-4e20-9aa6-edcd0212c87c}\" /f
+      REG DELETE \"HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Desktop\\NameSpace\\{f874310e-b6b7-47dc-bc84-b9e6b38f5903}\" /f
+      REG ADD \"HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\" /f /v \"LaunchTo\" /t REG_DWORD /d \"1\"
+      "
+  ],
+  "UndoScript": [
+      "
+      REG ADD \"HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Desktop\\NameSpace\\{e88865ea-0e1c-4e20-9aa6-edcd0212c87c}\" /f /ve /t REG_SZ /d \"{e88865ea-0e1c-4e20-9aa6-edcd0212c87c}\"
+      REG ADD \"HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Desktop\\NameSpace\\{f874310e-b6b7-47dc-bc84-b9e6b38f5903}\" /f /ve /t REG_SZ /d \"CLSID_MSGraphHomeFolder\"
+      REG DELETE \"HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\" /f /v \"LaunchTo\"
+      "
+  ]
+  },
   "WPFTweaksDisplay": {
     "Content": "Set Display for Performance",
     "Description": "Sets the system preferences to performance. You can do this manually with sysdm.cpl as well.",
@@ -2241,7 +2266,7 @@
             Write-Host \"Please run this script as an administrator.\"
             return
         }
-    
+
         # Check if System Restore is enabled for the main drive
         try {
             # Try getting restore points to check if System Restore is enabled
@@ -2249,14 +2274,14 @@
         } catch {
             Write-Host \"An error occurred while enabling System Restore: $_\"
         }
-    
+
         # Check if the SystemRestorePointCreationFrequency value exists
         $exists = Get-ItemProperty -path \"HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SystemRestore\" -Name \"SystemRestorePointCreationFrequency\" -ErrorAction SilentlyContinue
         if($null -eq $exists){
             write-host 'Changing system to allow multiple restore points per day'
             Set-ItemProperty -Path \"HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SystemRestore\" -Name \"SystemRestorePointCreationFrequency\" -Value \"0\" -Type DWord -Force -ErrorAction Stop | Out-Null
         }
-    
+
         # Attempt to load the required module for Get-ComputerRestorePoint
         try {
             Import-Module Microsoft.PowerShell.Management -ErrorAction Stop
@@ -2264,7 +2289,7 @@
             Write-Host \"Failed to load the Microsoft.PowerShell.Management module: $_\"
             return
         }
-    
+
         # Get all the restore points for the current day
         try {
             $existingRestorePoints = Get-ComputerRestorePoint | Where-Object { $_.CreationTime.Date -eq (Get-Date).Date }
@@ -2272,11 +2297,11 @@
             Write-Host \"Failed to retrieve restore points: $_\"
             return
         }
-    
+
         # Check if there is already a restore point created today
         if ($existingRestorePoints.Count -eq 0) {
             $description = \"System Restore Point created by WinUtil\"
-    
+
             Checkpoint-Computer -Description $description -RestorePointType \"MODIFY_SETTINGS\"
             Write-Host -ForegroundColor Green \"System Restore Point Created Successfully\"
         }
@@ -2290,19 +2315,35 @@
     "panel": "1",
     "Order": "a006_",
     "InvokeScript": [
-      "
-      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\TaskbarDeveloperSettings\" -Name \"TaskbarEndTask\" -Type \"DWord\" -Value \"1\"
-      "
+      "$path = \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\TaskbarDeveloperSettings\"
+      $name = \"TaskbarEndTask\"
+      $value = 1
+
+      # Ensure the registry key exists
+      if (-not (Test-Path $path)) {
+        New-Item -Path $path -Force | Out-Null
+      }
+
+      # Set the property, creating it if it doesn't exist
+      New-ItemProperty -Path $path -Name $name -PropertyType DWord -Value $value -Force | Out-Null"
     ],
     "UndoScript": [
-      "
-      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\TaskbarDeveloperSettings\" -Name \"TaskbarEndTask\" -Type \"DWord\" -Value \"0\"
-      "
+      "$path = \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\TaskbarDeveloperSettings\"
+      $name = \"TaskbarEndTask\"
+      $value = 0
+
+      # Ensure the registry key exists
+      if (-not (Test-Path $path)) {
+        New-Item -Path $path -Force | Out-Null
+      }
+
+      # Set the property, creating it if it doesn't exist
+      New-ItemProperty -Path $path -Name $name -PropertyType DWord -Value $value -Force | Out-Null"
     ]
   },
   "WPFTweaksPowershell7": {
-    "Content": "Replace Default Powershell 5 to Powershell 7",
-    "Description": "This will edit the config file of the Windows Terminal Replacing the Powershell 5 to Powershell 7 and install Powershell 7 if necessary",
+    "Content": "Change Windows Terminal default: PowerShell 5 -> PowerShell 7",
+    "Description": "This will edit the config file of the Windows Terminal replacing PowerShell 5 with PowerShell 7 and installing PS7 if necessary",
     "category": "Essential Tweaks",
     "panel": "1",
     "Order": "a009_",
@@ -2313,18 +2354,17 @@
       "Invoke-WPFTweakPS7 -action \"PS5\""
     ]
   },
-  "WPFTweaksOO": {
-    "Content": "Run OO Shutup",
-    "Description": "Runs OO Shutup and applies the recommended Tweaks. https://www.oo-software.com/en/shutup10",
+  "WPFTweaksPowershell7Tele": {
+    "Content": "Disable Powershell 7 Telemetry",
+    "Description": "This will create an Environment Variable called 'POWERSHELL_TELEMETRY_OPTOUT' with a value of '1' which will tell Powershell 7 to not send Telemetry Data.",
     "category": "Essential Tweaks",
     "panel": "1",
     "Order": "a009_",
-    "ToolTip": "Runs OO Shutup and applies the recommended Tweaks https://www.oo-software.com/en/shutup10",
     "InvokeScript": [
-      "Invoke-WPFOOSU -action \"recommended\""
+      "[Environment]::SetEnvironmentVariable('POWERSHELL_TELEMETRY_OPTOUT', '1', 'Machine')"
     ],
     "UndoScript": [
-      "Invoke-WPFOOSU -action \"undo\""
+      "[Environment]::SetEnvironmentVariable('POWERSHELL_TELEMETRY_OPTOUT', '', 'Machine')"
     ]
   },
   "WPFTweaksStorage": {
@@ -2342,17 +2382,15 @@
   },
   "WPFTweaksRemoveEdge": {
     "Content": "Remove Microsoft Edge - NOT RECOMMENDED",
-    "Description": "Removes MS Edge when it gets reinstalled by updates.",
+    "Description": "Removes MS Edge when it gets reinstalled by updates. Credit: AveYo",
     "category": "z__Advanced Tweaks - CAUTION",
     "panel": "1",
     "Order": "a029_",
     "InvokeScript": [
         "
         #:: Standalone script by AveYo Source: https://raw.githubusercontent.com/AveYo/fox/main/Edge_Removal.bat
-
-        curl.exe -s \"https://raw.githubusercontent.com/ChrisTitusTech/winutil/main/edgeremoval.bat\" -o $ENV:temp\\edgeremoval.bat
+        Invoke-WebRequest -Uri \"https://raw.githubusercontent.com/ChrisTitusTech/winutil/main/edgeremoval.bat\" -OutFile \"$ENV:TEMP\\edgeremoval.bat\"
         Start-Process $ENV:temp\\edgeremoval.bat
-
         "
     ],
     "UndoScript": [
@@ -2370,7 +2408,7 @@
     "Order": "a025_",
     "registry": [
       {
-        
+
         "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsCopilot",
         "Name": "TurnOffWindowsCopilot",
         "Type": "DWord",
@@ -2395,7 +2433,7 @@
     "InvokeScript": [
       "
       Write-Host \"Remove Copilot\"
-      dism /online /remove-package /package-name:Microsoft.Windows.Copilot  
+      dism /online /remove-package /package-name:Microsoft.Windows.Copilot
       "
     ],
     "UndoScript": [
@@ -2408,17 +2446,17 @@
   "WPFTweaksDisableLMS1": {
     "Content": "Disable Intel MM (vPro LMS)",
     "Description": "Intel LMS service is always listening on all ports and could be a huge security risk. There is no need to run LMS on home machines and even in the Enterprise there are better solutions.",
-    "category": "Essential Tweaks",
+    "category": "z__Advanced Tweaks - CAUTION",
     "panel": "1",
-    "Order": "a0015_",
+    "Order": "a026_",
     "InvokeScript": [
         "
-        Write-Host \"Kill OneDrive process\"
-        $serviceName = \"LMS\"   
+        Write-Host \"Kill LMS\"
+        $serviceName = \"LMS\"
         Write-Host \"Stopping and disabling service: $serviceName\"
         Stop-Service -Name $serviceName -Force -ErrorAction SilentlyContinue;
         Set-Service -Name $serviceName -StartupType Disabled -ErrorAction SilentlyContinue;
-        
+
         Write-Host \"Removing service: $serviceName\";
         sc.exe delete $serviceName;
 
@@ -2433,7 +2471,7 @@
         } else {
             Write-Host \"All found LMS driver packages have been removed.\";
         }
-        
+
         Write-Host \"Searching and deleting LMS executable files\";
         $programFilesDirs = @(\"C:\\Program Files\", \"C:\\Program Files (x86)\");
         $lmsFiles = @();
@@ -2451,93 +2489,105 @@
             Write-Host \"No LMS.exe files found in Program Files directories.\";
         } else {
             Write-Host \"All found LMS.exe files have been deleted.\";
-        }        
+        }
         Write-Host 'Intel LMS vPro service has been disabled, removed, and blocked.';
        "
     ],
     "UndoScript": [
       "
-      Write-Host \"Install Microsoft Edge\"
-      taskkill.exe /F /IM \"OneDrive.exe\"
+      Write-Host \"LMS vPro needs to be redownloaded from intel.com\"
 
       "
     ]
-  },  
+  },
   "WPFTweaksRemoveOnedrive": {
     "Content": "Remove OneDrive",
-    "Description": "Copies OneDrive files to Default Home Folders and Uninstalls it.",
+    "Description": "Moves OneDrive files to Default Home Folders and Uninstalls it.",
     "category": "z__Advanced Tweaks - CAUTION",
     "panel": "1",
     "Order": "a030_",
     "InvokeScript": [
-        "
+      "
+      $OneDrivePath = $($env:OneDrive)
+      Write-Host \"Removing OneDrive\"
+      $regPath = \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\OneDriveSetup.exe\"
+      if (Test-Path $regPath){
+          $OneDriveUninstallString = Get-ItemPropertyValue \"$regPath\" -Name \"UninstallString\"
+          $OneDriveExe, $OneDriveArgs = $OneDriveUninstallString.Split(\" \")
+          Start-Process -FilePath $OneDriveExe -ArgumentList \"$OneDriveArgs /silent\" -NoNewWindow -Wait
+      }
+      else{
+          Write-Host \"Onedrive dosn't seem to be installed anymore\" -ForegroundColor Red
+          return
+      }
+      # Check if OneDrive got Uninstalled
+      if (-not (Test-Path $regPath)){
+      Write-Host \"Copy downloaded Files from the OneDrive Folder to Root UserProfile\"
+      Start-Process -FilePath powershell -ArgumentList \"robocopy '$($OneDrivePath)' '$($env:USERPROFILE.TrimEnd())\\' /mov /e /xj\" -NoNewWindow -Wait
 
-        Write-Host \"Kill OneDrive process\"
-        taskkill.exe /F /IM \"OneDrive.exe\"
-        taskkill.exe /F /IM \"explorer.exe\"
+      Write-Host \"Removing OneDrive leftovers\"
+      Remove-Item -Recurse -Force -ErrorAction SilentlyContinue \"$env:localappdata\\Microsoft\\OneDrive\"
+      Remove-Item -Recurse -Force -ErrorAction SilentlyContinue \"$env:localappdata\\OneDrive\"
+      Remove-Item -Recurse -Force -ErrorAction SilentlyContinue \"$env:programdata\\Microsoft OneDrive\"
+      Remove-Item -Recurse -Force -ErrorAction SilentlyContinue \"$env:systemdrive\\OneDriveTemp\"
+      reg delete \"HKEY_CURRENT_USER\\Software\\Microsoft\\OneDrive\" -f
+      # check if directory is empty before removing:
+      If ((Get-ChildItem \"$OneDrivePath\" -Recurse | Measure-Object).Count -eq 0) {
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue \"$OneDrivePath\"
+      }
 
-        Write-Host \"Copy all OneDrive to Root UserProfile\"
-        Start-Process -FilePath powershell -ArgumentList \"robocopy '$($env:USERPROFILE.TrimEnd())\\OneDrive' '$($env:USERPROFILE.TrimEnd())\\' /e /xj\" -NoNewWindow -Wait
+      Write-Host \"Remove Onedrive from explorer sidebar\"
+      Set-ItemProperty -Path \"HKCR:\\CLSID\\{018D5C66-4533-4307-9B53-224DE2ED1FE6}\" -Name \"System.IsPinnedToNameSpaceTree\" -Value 0
+      Set-ItemProperty -Path \"HKCR:\\Wow6432Node\\CLSID\\{018D5C66-4533-4307-9B53-224DE2ED1FE6}\" -Name \"System.IsPinnedToNameSpaceTree\" -Value 0
 
-        Write-Host \"Remove OneDrive\"
-        Start-Process -FilePath winget -ArgumentList \"uninstall -e --purge --force --silent Microsoft.OneDrive \" -NoNewWindow -Wait
+      Write-Host \"Removing run hook for new users\"
+      reg load \"hku\\Default\" \"C:\\Users\\Default\\NTUSER.DAT\"
+      reg delete \"HKEY_USERS\\Default\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\" /v \"OneDriveSetup\" /f
+      reg unload \"hku\\Default\"
 
-        Write-Host \"Removing OneDrive leftovers\"
-        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue \"$env:localappdata\\Microsoft\\OneDrive\"
-        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue \"$env:localappdata\\OneDrive\"
-        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue \"$env:programdata\\Microsoft OneDrive\"
-        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue \"$env:systemdrive\\OneDriveTemp\"
-        # check if directory is empty before removing:
-        If ((Get-ChildItem \"$env:userprofile\\OneDrive\" -Recurse | Measure-Object).Count -eq 0) {
-            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue \"$env:userprofile\\OneDrive\"
-        }
+      Write-Host \"Removing startmenu entry\"
+      Remove-Item -Force -ErrorAction SilentlyContinue \"$env:userprofile\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\OneDrive.lnk\"
 
-        Write-Host \"Remove Onedrive from explorer sidebar\"
-        Set-ItemProperty -Path \"HKCR:\\CLSID\\{018D5C66-4533-4307-9B53-224DE2ED1FE6}\" -Name \"System.IsPinnedToNameSpaceTree\" -Value 0
-        Set-ItemProperty -Path \"HKCR:\\Wow6432Node\\CLSID\\{018D5C66-4533-4307-9B53-224DE2ED1FE6}\" -Name \"System.IsPinnedToNameSpaceTree\" -Value 0
+      Write-Host \"Removing scheduled task\"
+      Get-ScheduledTask -TaskPath '\\' -TaskName 'OneDrive*' -ea SilentlyContinue | Unregister-ScheduledTask -Confirm:$false
 
-        Write-Host \"Removing run hook for new users\"
-        reg load \"hku\\Default\" \"C:\\Users\\Default\\NTUSER.DAT\"
-        reg delete \"HKEY_USERS\\Default\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\" /v \"OneDriveSetup\" /f
-        reg unload \"hku\\Default\"
+      # Add Shell folders restoring default locations
+      Write-Host \"Shell Fixing\"
+      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"AppData\" -Value \"$env:userprofile\\AppData\\Roaming\" -Type ExpandString
+      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Cache\" -Value \"$env:userprofile\\AppData\\Local\\Microsoft\\Windows\\INetCache\" -Type ExpandString
+      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Cookies\" -Value \"$env:userprofile\\AppData\\Local\\Microsoft\\Windows\\INetCookies\" -Type ExpandString
+      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Favorites\" -Value \"$env:userprofile\\Favorites\" -Type ExpandString
+      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"History\" -Value \"$env:userprofile\\AppData\\Local\\Microsoft\\Windows\\History\" -Type ExpandString
+      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Local AppData\" -Value \"$env:userprofile\\AppData\\Local\" -Type ExpandString
+      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"My Music\" -Value \"$env:userprofile\\Music\" -Type ExpandString
+      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"My Video\" -Value \"$env:userprofile\\Videos\" -Type ExpandString
+      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"NetHood\" -Value \"$env:userprofile\\AppData\\Roaming\\Microsoft\\Windows\\Network Shortcuts\" -Type ExpandString
+      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"PrintHood\" -Value \"$env:userprofile\\AppData\\Roaming\\Microsoft\\Windows\\Printer Shortcuts\" -Type ExpandString
+      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Programs\" -Value \"$env:userprofile\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\" -Type ExpandString
+      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Recent\" -Value \"$env:userprofile\\AppData\\Roaming\\Microsoft\\Windows\\Recent\" -Type ExpandString
+      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"SendTo\" -Value \"$env:userprofile\\AppData\\Roaming\\Microsoft\\Windows\\SendTo\" -Type ExpandString
+      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Start Menu\" -Value \"$env:userprofile\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\" -Type ExpandString
+      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Startup\" -Value \"$env:userprofile\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\" -Type ExpandString
+      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Templates\" -Value \"$env:userprofile\\AppData\\Roaming\\Microsoft\\Windows\\Templates\" -Type ExpandString
+      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"{374DE290-123F-4565-9164-39C4925E467B}\" -Value \"$env:userprofile\\Downloads\" -Type ExpandString
+      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Desktop\" -Value \"$env:userprofile\\Desktop\" -Type ExpandString
+      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"My Pictures\" -Value \"$env:userprofile\\Pictures\" -Type ExpandString
+      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Personal\" -Value \"$env:userprofile\\Documents\" -Type ExpandString
+      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"{F42EE2D3-909F-4907-8871-4C22FC0BF756}\" -Value \"$env:userprofile\\Documents\" -Type ExpandString
+      Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"{0DDD015D-B06C-45D5-8C4C-F59713854639}\" -Value \"$env:userprofile\\Pictures\" -Type ExpandString
+      Write-Host \"Restarting explorer\"
+      taskkill.exe /F /IM \"explorer.exe\"
+      Start-Process \"explorer.exe\"
 
-        Write-Host \"Removing startmenu entry\"
-        Remove-Item -Force -ErrorAction SilentlyContinue \"$env:userprofile\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\OneDrive.lnk\"
-
-        Write-Host \"Removing scheduled task\"
-        Get-ScheduledTask -TaskPath '\\' -TaskName 'OneDrive*' -ea SilentlyContinue | Unregister-ScheduledTask -Confirm:$false
-
-        # Add Shell folders restoring default locations
-        Write-Host \"Shell Fixing\"
-        Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"AppData\" -Value \"$env:userprofile\\AppData\\Roaming\" -Type ExpandString
-        Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Cache\" -Value \"$env:userprofile\\AppData\\Local\\Microsoft\\Windows\\INetCache\" -Type ExpandString
-        Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Cookies\" -Value \"$env:userprofile\\AppData\\Local\\Microsoft\\Windows\\INetCookies\" -Type ExpandString
-        Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Favorites\" -Value \"$env:userprofile\\Favorites\" -Type ExpandString
-        Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"History\" -Value \"$env:userprofile\\AppData\\Local\\Microsoft\\Windows\\History\" -Type ExpandString
-        Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Local AppData\" -Value \"$env:userprofile\\AppData\\Local\" -Type ExpandString
-        Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"My Music\" -Value \"$env:userprofile\\Music\" -Type ExpandString
-        Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"My Video\" -Value \"$env:userprofile\\Videos\" -Type ExpandString
-        Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"NetHood\" -Value \"$env:userprofile\\AppData\\Roaming\\Microsoft\\Windows\\Network Shortcuts\" -Type ExpandString
-        Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"PrintHood\" -Value \"$env:userprofile\\AppData\\Roaming\\Microsoft\\Windows\\Printer Shortcuts\" -Type ExpandString
-        Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Programs\" -Value \"$env:userprofile\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\" -Type ExpandString
-        Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Recent\" -Value \"$env:userprofile\\AppData\\Roaming\\Microsoft\\Windows\\Recent\" -Type ExpandString
-        Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"SendTo\" -Value \"$env:userprofile\\AppData\\Roaming\\Microsoft\\Windows\\SendTo\" -Type ExpandString
-        Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Start Menu\" -Value \"$env:userprofile\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\" -Type ExpandString
-        Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Startup\" -Value \"$env:userprofile\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\" -Type ExpandString
-        Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Templates\" -Value \"$env:userprofile\\AppData\\Roaming\\Microsoft\\Windows\\Templates\" -Type ExpandString
-        Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"{374DE290-123F-4565-9164-39C4925E467B}\" -Value \"$env:userprofile\\Downloads\" -Type ExpandString
-        Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Desktop\" -Value \"$env:userprofile\\Desktop\" -Type ExpandString
-        Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"My Pictures\" -Value \"$env:userprofile\\Pictures\" -Type ExpandString
-        Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Personal\" -Value \"$env:userprofile\\Documents\" -Type ExpandString
-        Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"{F42EE2D3-909F-4907-8871-4C22FC0BF756}\" -Value \"$env:userprofile\\Documents\" -Type ExpandString
-        Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"{0DDD015D-B06C-45D5-8C4C-F59713854639}\" -Value \"$env:userprofile\\Pictures\" -Type ExpandString
-        Write-Host \"Restarting explorer\"
-        Start-Process \"explorer.exe\"
-
-        Write-Host \"Waiting for explorer to complete loading\"
-        Write-Host \"Please Note - OneDrive folder may still have items in it. You must manually delete it, but all the files should already be copied to the base user folder.\"
-        Start-Sleep 5
-        "
+      Write-Host \"Waiting for explorer to complete loading\"
+      Write-Host \"Please Note - The OneDrive folder at $OneDrivePath may still have items in it. You must manually delete it, but all the files should already be copied to the base user folder.\"
+      Write-Host \"If there are Files missing afterwards, please Login to Onedrive.com and Download them manually\" -ForegroundColor Yellow
+      Start-Sleep 5
+      }
+      else{
+      Write-Host \"Something went Wrong during the Unistallation of OneDrive\" -ForegroundColor Red
+      }
+      "
     ],
     "UndoScript": [
       "
@@ -2574,25 +2624,25 @@
     "Description": "Manages Adobe Services, Adobe Desktop Service, and Acrobat Updates",
     "category": "z__Advanced Tweaks - CAUTION",
     "panel": "1",
-    "Order": "a021_",    
+    "Order": "a021_",
     "InvokeScript": [
       "
       function CCStopper {
         $path = \"C:\\Program Files (x86)\\Common Files\\Adobe\\Adobe Desktop Common\\ADS\\Adobe Desktop Service.exe\"
-        
+
         # Test if the path exists before proceeding
         if (Test-Path $path) {
             Takeown /f $path
             $acl = Get-Acl $path
             $acl.SetOwner([System.Security.Principal.NTAccount]\"Administrators\")
             $acl | Set-Acl $path
-    
+
             Rename-Item -Path $path -NewName \"Adobe Desktop Service.exe.old\" -Force
         } else {
             Write-Host \"Adobe Desktop Service is not in the default location.\"
         }
       }
-    
+
 
       function AcrobatUpdates {
         # Editing Acrobat Updates. The last folder before the key is dynamic, therefore using a script.
@@ -2602,12 +2652,12 @@
         # 3 = Automatically download and install updates (default value)
         # 4 = Notify the user when an update is available but don't download or install it automatically
         #   = It notifies the user using Windows Notifications. It runs on startup without having to have a Service/Acrobat/Reader running, therefore 0 is the next best thing.
-    
+
         $rootPath = \"HKLM:\\SOFTWARE\\WOW6432Node\\Adobe\\Adobe ARM\\Legacy\\Acrobat\"
-    
+
         # Get all subkeys under the specified root path
         $subKeys = Get-ChildItem -Path $rootPath | Where-Object { $_.PSChildName -like \"{*}\" }
-    
+
         # Loop through each subkey
         foreach ($subKey in $subKeys) {
             # Get the full registry path
@@ -2630,7 +2680,7 @@
       function RestoreCCService {
         $originalPath = \"C:\\Program Files (x86)\\Common Files\\Adobe\\Adobe Desktop Common\\ADS\\Adobe Desktop Service.exe.old\"
         $newPath = \"C:\\Program Files (x86)\\Common Files\\Adobe\\Adobe Desktop Common\\ADS\\Adobe Desktop Service.exe\"
-    
+
         if (Test-Path -Path $originalPath) {
             Rename-Item -Path $originalPath -NewName \"Adobe Desktop Service.exe\" -Force
             Write-Host \"Adobe Desktop Service has been restored.\"
@@ -2642,12 +2692,12 @@
       function AcrobatUpdates {
         # Default Value:
         # 3 = Automatically download and install updates
-    
+
         $rootPath = \"HKLM:\\SOFTWARE\\WOW6432Node\\Adobe\\Adobe ARM\\Legacy\\Acrobat\"
-    
+
         # Get all subkeys under the specified root path
         $subKeys = Get-ChildItem -Path $rootPath | Where-Object { $_.PSChildName -like \"{*}\" }
-    
+
         # Loop through each subkey
         foreach ($subKey in $subKeys) {
             # Get the full registry path
@@ -2719,17 +2769,17 @@
   },
   "WPFTweaksBlockAdobeNet": {
     "Content": "Adobe Network Block",
-    "Description": "Reduce user interruptions by selectively blocking connections to Adobe's activation and telemetry servers. ",
+    "Description": "Reduce user interruptions by selectively blocking connections to Adobe's activation and telemetry servers. Credit: Ruddernation-Designs",
     "category": "z__Advanced Tweaks - CAUTION",
     "panel": "1",
-    "Order": "a021_",    
+    "Order": "a021_",
     "InvokeScript": [
       "
       # Define the URL of the remote HOSTS file and the local paths
       $remoteHostsUrl = \"https://raw.githubusercontent.com/Ruddernation-Designs/Adobe-URL-Block-List/master/hosts\"
       $localHostsPath = \"C:\\Windows\\System32\\drivers\\etc\\hosts\"
       $tempHostsPath = \"C:\\Windows\\System32\\drivers\\etc\\temp_hosts\"
-      
+
       # Download the remote HOSTS file to a temporary location
       try {
           Invoke-WebRequest -Uri $remoteHostsUrl -OutFile $tempHostsPath
@@ -2738,11 +2788,11 @@
       catch {
           Write-Error \"Failed to download the HOSTS file. Error: $_\"
       }
-      
+
       # Check if the AdobeNetBlock has already been started
       try {
           $localHostsContent = Get-Content $localHostsPath -ErrorAction Stop
-      
+
           # Check if AdobeNetBlock markers exist
           $blockStartExists = $localHostsContent -like \"*#AdobeNetBlock-start*\"
           if ($blockStartExists) {
@@ -2753,10 +2803,10 @@
               $newBlockContent = $newBlockContent | Where-Object { $_ -notmatch \"^\\s*#\" -and $_ -ne \"\" } # Exclude empty lines and comments
               $newBlockHeader = \"#AdobeNetBlock-start\"
               $newBlockFooter = \"#AdobeNetBlock-end\"
-      
+
               # Combine the contents, ensuring new block is properly formatted
               $combinedContent = $localHostsContent + $newBlockHeader, $newBlockContent, $newBlockFooter | Out-String
-      
+
               # Write the combined content back to the original HOSTS file
               $combinedContent | Set-Content $localHostsPath -Encoding ASCII
               Write-Output \"Successfully added the AdobeNetBlock.\"
@@ -2765,10 +2815,10 @@
       catch {
           Write-Error \"Error during processing: $_\"
       }
-      
+
       # Clean up temporary file
       Remove-Item $tempHostsPath -ErrorAction Ignore
-      
+
       # Flush the DNS resolver cache
       try {
           Invoke-Expression \"ipconfig /flushdns\"
@@ -2783,7 +2833,7 @@
       "
       # Define the local path of the HOSTS file
       $localHostsPath = \"C:\\Windows\\System32\\drivers\\etc\\hosts\"
-      
+
       # Load the content of the HOSTS file
       try {
           $hostsContent = Get-Content $localHostsPath -ErrorAction Stop
@@ -2792,11 +2842,11 @@
           Write-Error \"Failed to load the HOSTS file. Error: $_\"
           return
       }
-      
+
       # Initialize flags and buffer for new content
       $recording = $true
       $newContent = @()
-      
+
       # Iterate over each line of the HOSTS file
       foreach ($line in $hostsContent) {
           if ($line -match \"#AdobeNetBlock-start\") {
@@ -2809,7 +2859,7 @@
               $recording = $true
           }
       }
-      
+
       # Write the filtered content back to the HOSTS file
       try {
           $newContent | Set-Content $localHostsPath -Encoding ASCII
@@ -2818,7 +2868,7 @@
       catch {
           Write-Error \"Failed to write back to the HOSTS file. Error: $_\"
       }
-      
+
       # Flush the DNS resolver cache
       try {
           Invoke-Expression \"ipconfig /flushdns\"
@@ -2982,34 +3032,12 @@
       }
     ]
   },
-  "WPFTweaksEnableipsix": {
-    "Content": "Enable IPv6",
-    "Description": "Enables IPv6.",
-    "category": "z__Advanced Tweaks - CAUTION",
-    "panel": "1",
-    "Order": "a023_",
-    "registry": [
-      {
-        "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip6\\Parameters",
-        "Name": "DisabledComponents",
-        "Value": "0",
-        "OriginalValue": "0",
-        "Type": "DWord"
-      }
-    ],
-    "InvokeScript": [
-      "Enable-NetAdapterBinding -Name \"*\" -ComponentID ms_tcpip6"
-    ],
-    "UndoScript": [
-      "Disable-NetAdapterBinding -Name \"*\" -ComponentID ms_tcpip6"
-    ]
-  },
   "WPFToggleDarkMode": {
-    "Content": "Dark Theme",
+    "Content": "Dark Theme for Windows",
     "Description": "Enable/Disable Dark Mode.",
     "category": "Customize Preferences",
     "panel": "2",
-    "Order": "a060_",
+    "Order": "a100_",
     "Type": "Toggle"
   },
   "WPFToggleBingSearch": {
@@ -3017,7 +3045,7 @@
     "Description": "If enable then includes web search results from Bing in your Start Menu search.",
     "category": "Customize Preferences",
     "panel": "2",
-    "Order": "a061_",
+    "Order": "a101_",
     "Type": "Toggle"
   },
   "WPFToggleNumLock": {
@@ -3025,23 +3053,15 @@
     "Description": "Toggle the Num Lock key state when your computer starts.",
     "category": "Customize Preferences",
     "panel": "2",
-    "Order": "a062_",
+    "Order": "a102_",
     "Type": "Toggle"
   },
   "WPFToggleVerboseLogon": {
-    "Content": "Verbose Logon Messages",
+    "Content": "Verbose Messages During Logon",
     "Description": "Show detailed messages during the login process for troubleshooting and diagnostics.",
     "category": "Customize Preferences",
     "panel": "2",
-    "Order": "a063_",
-    "Type": "Toggle"
-  },
-  "WPFToggleShowExt": {
-    "Content": "Show File Extensions",
-    "Description": "If enabled then File extensions (e.g., .txt, .jpg) are visible.",
-    "category": "Customize Preferences",
-    "panel": "2",
-    "Order": "a064_",
+    "Order": "a103_",
     "Type": "Toggle"
   },
   "WPFToggleSnapWindow": {
@@ -3049,7 +3069,7 @@
     "Description": "If enabled you can align windows by dragging them. | Relogin Required",
     "category": "Customize Preferences",
     "panel": "2",
-    "Order": "a065_",
+    "Order": "a104_",
     "Type": "Toggle"
   },
   "WPFToggleSnapFlyout": {
@@ -3057,7 +3077,7 @@
     "Description": "If enabled then Snap preview is disabled when maximize button is hovered.",
     "category": "Customize Preferences",
     "panel": "2",
-    "Order": "a066_",
+    "Order": "a105_",
     "Type": "Toggle"
   },
   "WPFToggleSnapSuggestion": {
@@ -3065,7 +3085,7 @@
     "Description": "If enabled then you will get suggestions to snap other applications in the left over spaces.",
     "category": "Customize Preferences",
     "panel": "2",
-    "Order": "a067_",
+    "Order": "a106_",
     "Type": "Toggle"
   },
   "WPFToggleMouseAcceleration": {
@@ -3073,7 +3093,7 @@
     "Description": "If Enabled then Cursor movement is affected by the speed of your physical mouse movements.",
     "category": "Customize Preferences",
     "panel": "2",
-    "Order": "a068_",
+    "Order": "a107_",
     "Type": "Toggle"
   },
   "WPFToggleStickyKeys": {
@@ -3081,23 +3101,63 @@
     "Description": "If Enabled then Sticky Keys is activated - Sticky keys is an accessibility feature of some graphical user interfaces which assists users who have physical disabilities or help users reduce repetitive strain injury.",
     "category": "Customize Preferences",
     "panel": "2",
-    "Order": "a069_",
+    "Order": "a108_",
+    "Type": "Toggle"
+  },
+  "WPFToggleHiddenFiles": {
+    "Content": "Show Hidden Files",
+    "Description": "If Enabled then Hidden Files will be shown.",
+    "category": "Customize Preferences",
+    "panel": "2",
+    "Order": "a200_",
+    "Type": "Toggle"
+  },
+  "WPFToggleShowExt": {
+    "Content": "Show File Extensions",
+    "Description": "If enabled then File extensions (e.g., .txt, .jpg) are visible.",
+    "category": "Customize Preferences",
+    "panel": "2",
+    "Order": "a201_",
+    "Type": "Toggle"
+  },
+  "WPFToggleTaskbarSearch": {
+    "Content": "Search Button in Taskbar",
+    "Description": "If Enabled Search Button will be on the taskbar.",
+    "category": "Customize Preferences",
+    "panel": "2",
+    "Order": "a202_",
+    "Type": "Toggle"
+  },
+  "WPFToggleTaskView": {
+    "Content": "Task View Button in Taskbar",
+    "Description": "If Enabled then Task View Button in Taskbar will be shown.",
+    "category": "Customize Preferences",
+    "panel": "2",
+    "Order": "a203_",
+    "Type": "Toggle"
+  },
+  "WPFToggleTaskbarWidgets": {
+    "Content": "Widgets Button in Taskbar",
+    "Description": "If Enabled then Widgets Button in Taskbar will be shown.",
+    "category": "Customize Preferences",
+    "panel": "2",
+    "Order": "a204_",
+    "Type": "Toggle"
+  },
+  "WPFToggleTaskbarAlignment": {
+    "Content": "Center Taskbar Items",
+    "Description": "[Windows 11] If Enabled then the Taskbar Items will be shown on the Center, otherwise the Taskbar Items will be shown on the Left.",
+    "category": "Customize Preferences",
+    "panel": "2",
+    "Order": "a204_",
     "Type": "Toggle"
   },
   "WPFOOSUbutton": {
-    "Content": "Customize OO Shutup Tweaks",
+    "Content": "Run OO Shutup 10",
     "category": "z__Advanced Tweaks - CAUTION",
     "panel": "1",
     "Order": "a039_",
-    "Type": "220"
-  },
-  "WPFToggleTaskbarWidgets": {
-    "Content": "Taskbar Widgets",
-    "Description": "If Enabled then Widgets Icon in Taskbar will be shown.",
-    "category": "Customize Preferences",
-    "panel": "2",
-    "Order": "a068_",
-    "Type": "Toggle"
+    "Type": "Button"
   },
   "WPFchangedns": {
     "Content": "DNS",
@@ -3105,41 +3165,44 @@
     "panel": "1",
     "Order": "a040_",
     "Type": "Combobox",
-    "ComboItems": "Default DHCP Google Cloudflare Cloudflare_Malware Cloudflare_Malware_Adult Level3 Open_DNS Quad9"
+    "ComboItems": "Default DHCP Google Cloudflare Cloudflare_Malware Cloudflare_Malware_Adult Open_DNS Quad9 AdGuard_Ads_Trackers AdGuard_Ads_Trackers_Malware_Adult"
   },
   "WPFTweaksbutton": {
     "Content": "Run Tweaks",
     "category": "z__Advanced Tweaks - CAUTION",
     "panel": "1",
     "Order": "a041_",
-    "Type": "160"
+    "Type": "Button"
   },
   "WPFUndoall": {
     "Content": "Undo Selected Tweaks",
     "category": "z__Advanced Tweaks - CAUTION",
     "panel": "1",
     "Order": "a042_",
-    "Type": "160"
+    "Type": "Button"
   },
   "WPFAddUltPerf": {
     "Content": "Add and Activate Ultimate Performance Profile",
     "category": "Performance Plans",
     "panel": "2",
     "Order": "a080_",
-    "Type": "300"
+    "Type": "Button",
+    "ButtonWidth": "300"
   },
   "WPFRemoveUltPerf": {
     "Content": "Remove Ultimate Performance Profile",
     "category": "Performance Plans",
     "panel": "2",
     "Order": "a081_",
-    "Type": "300"
+    "Type": "Button",
+    "ButtonWidth": "300"
   },
   "WPFWinUtilShortcut": {
     "Content": "Create WinUtil Shortcut",
     "category": "Shortcuts",
     "panel": "2",
     "Order": "a082_",
-    "Type": "300"
+    "Type": "Button",
+    "ButtonWidth": "300"
   }
 }

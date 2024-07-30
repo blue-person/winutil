@@ -2,17 +2,17 @@ function Install-WinUtilProgramChoco {
     <#
     .SYNOPSIS
     Manages the provided programs using Chocolatey
-    
+
     .PARAMETER ProgramsToInstall
     A list of programs to manage
-    
+
     .PARAMETER manage
     The action to perform on the programs, can be either 'Installing' or 'Uninstalling'
-    
+
     .NOTES
     The triple quotes are required any time you need a " in a normal script block.
     #>
-    
+
     param(
         [Parameter(Mandatory, Position=0)]
         [PsCustomObject]$ProgramsToInstall,
@@ -20,7 +20,7 @@ function Install-WinUtilProgramChoco {
         [Parameter(Position=1)]
         [String]$manage = "Installing"
     )
-    
+
     $x = 0
     $count = $ProgramsToInstall.Count
 
@@ -54,12 +54,18 @@ function Install-WinUtilProgramChoco {
 		}
 		if(($chocoInstallStatus -eq 0) -AND ($tryUpgrade -eq $false)){
                     Write-Host "$($Program.choco) installed successfully using Chocolatey."
+                    $X++
+                    $sync.form.Dispatcher.Invoke([action]{ Set-WinUtilTaskbaritem -state "Normal" -value ($x/$count) })
                     continue
                 } else {
                     Write-Host "Failed to install $($Program.choco) using Chocolatey, Chocolatey output:`n`n$(Get-Content -Path $installOutputFilePath)."
+                    $X++
+                    $sync.form.Dispatcher.Invoke([action]{ Set-WinUtilTaskbaritem -state "Error" -value ($x/$count) })
                 }
             } catch {
                 Write-Host "Failed to install $($Program.choco) due to an error: $_"
+                $X++
+                $sync.form.Dispatcher.Invoke([action]{ Set-WinUtilTaskbaritem -state "Error" -value ($x/$count) })
             }
         }
 
@@ -71,21 +77,26 @@ function Install-WinUtilProgramChoco {
 		$chocoUninstallStatus = $(Start-Process -FilePath "choco" -ArgumentList "uninstall $($Program.choco) -y" -Wait -PassThru).ExitCode
 		if($chocoUninstallStatus -eq 0){
                     Write-Host "$($Program.choco) uninstalled successfully using Chocolatey."
+                    $x++
+                    $sync.form.Dispatcher.Invoke([action]{ Set-WinUtilTaskbaritem -state "Normal" -value ($x/$count) })
                     continue
                 } else {
                     Write-Host "Failed to uninstall $($Program.choco) using Chocolatey, Chocolatey output:`n`n$(Get-Content -Path $uninstallOutputFilePath)."
+                    $x++
+                    $sync.form.Dispatcher.Invoke([action]{ Set-WinUtilTaskbaritem -state "Error" -value ($x/$count) })
                 }
             } catch {
                 Write-Host "Failed to uninstall $($Program.choco) due to an error: $_"
+                $x++
+                $sync.form.Dispatcher.Invoke([action]{ Set-WinUtilTaskbaritem -state "Error" -value ($x/$count) })
             }
 	}
-        $x++
     }
     Write-Progress -Activity "$manage Applications" -Status "Finished" -Completed
 
     # Cleanup leftovers files
     if(Test-Path -Path $installOutputFilePath){ Remove-Item -Path $installOutputFilePath }
-    if(Test-Path -Path $installOutputFilePath){ Remove-Item -Path $uninstallOutputFilePath }
+    if(Test-Path -Path $uninstallOutputFilePath){ Remove-Item -Path $uninstallOutputFilePath }
 
     return;
 }

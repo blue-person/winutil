@@ -1,22 +1,25 @@
-Function Invoke-WinUtilStickyKeys {
+function Invoke-WinUtilTaskbarSearch {
     <#
+
     .SYNOPSIS
-        Disables/Enables Sticky Keyss on startup
+        Enable/Disable Taskbar Search Button.
+
     .PARAMETER Enabled
-        Indicates whether to enable or disable Sticky Keys on startup
+        Indicates whether to enable or disable Taskbar Search Button.
+
     #>
     Param($Enabled)
-    Try {
+    Try{
         if ($Enabled -eq $false){
-            Write-Host "Enabling Sticky Keys On startup"
-            $value = 510
+            Write-Host "Enabling Search Button"
+            $value = 1
         }
         else {
-            Write-Host "Disabling Sticky Keys On startup"
-            $value = 58
+            Write-Host "Disabling Search Button"
+            $value = 0
         }
-        $Path = "HKCU:\Control Panel\Accessibility\StickyKeys"
-        Set-ItemProperty -Path $Path -Name Flags -Value $value
+        $Path = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search\"
+        Set-ItemProperty -Path $Path -Name SearchboxTaskbarMode -Value $value
     }
     Catch [System.Security.SecurityException] {
         Write-Warning "Unable to set $Path\$Name to $Value due to a Security Exception"
