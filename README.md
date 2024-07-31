@@ -14,7 +14,6 @@ You might also consider using the original version from Chris Titus:
 
 ```
 irm "https://christitus.com/win" | iex
-
 ```
 
 ## Support:
