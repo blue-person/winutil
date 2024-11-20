@@ -6,7 +6,7 @@ function Invoke-WPFUnInstall {
 
     #>
 
-    if($sync.ProcessRunning){
+    if($sync.ProcessRunning) {
         $msg = "[Invoke-WPFUnInstall] Install process is currently running"
         [System.Windows.MessageBox]::Show($msg, "Winutil", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
         return
@@ -27,49 +27,59 @@ function Invoke-WPFUnInstall {
 
     $confirm = [System.Windows.MessageBox]::Show($Messageboxbody, $MessageboxTitle, $ButtonType, $MessageIcon)
 
-    if($confirm -eq "No"){return}
+    if($confirm -eq "No") {return}
+    $ChocoPreference = $($sync.WPFpreferChocolatey.IsChecked)
 
-
-    Invoke-WPFRunspace -ArgumentList $PackagesToInstall -DebugPreference $DebugPreference -ScriptBlock {
-        param($PackagesToInstall, $DebugPreference)
-        if ($PackagesToInstall.count -eq 1){
+    Invoke-WPFRunspace -ArgumentList @(("PackagesToInstall", $PackagesToInstall),("ChocoPreference", $ChocoPreference)) -DebugPreference $DebugPreference -ScriptBlock {
+        param($PackagesToInstall, $ChocoPreference, $DebugPreference)
+        if ($PackagesToInstall.count -eq 1) {
             $sync.form.Dispatcher.Invoke([action]{ Set-WinUtilTaskbaritem -state "Indeterminate" -value 0.01 -overlay "logo" })
         } else {
             $sync.form.Dispatcher.Invoke([action]{ Set-WinUtilTaskbaritem -state "Normal" -value 0.01 -overlay "logo" })
         }
         $packagesWinget, $packagesChoco = {
-            $packagesWinget = [System.Collections.Generic.List`1[System.Object]]::new()
-            $packagesChoco = [System.Collections.Generic.List`1[System.Object]]::new()
-            foreach ($package in $PackagesToInstall) {
-                if ($package.winget -eq "na") {
-                    $packagesChoco.add($package)
-                    Write-Host "Queueing $($package.choco) for Chocolatey Uninstall"
+            $packagesWinget = [System.Collections.ArrayList]::new()
+            $packagesChoco = [System.Collections.ArrayList]::new()
+
+        foreach ($package in $PackagesToInstall) {
+            if ($ChocoPreference) {
+                if ($package.choco -eq "na") {
+                    $packagesWinget.add($package.winget)
+                    Write-Host "Queueing $($package.winget) for Winget uninstall"
                 } else {
-                    $packagesWinget.add($package)
-                    Write-Host "Queueing $($package.winget) for Winget Uninstall"
+                    $null = $packagesChoco.add($package.choco)
+                    Write-Host "Queueing $($package.choco) for Chocolatey uninstall"
                 }
             }
-            return $packagesWinget, $packagesChoco
+            else {
+                if ($package.winget -eq "na") {
+                    $packagesChoco.add($package.choco)
+                    Write-Host "Queueing $($package.choco) for Chocolatey uninstall"
+                } else {
+                    $null = $packagesWinget.add($($package.winget))
+                    Write-Host "Queueing $($package.winget) for Winget uninstall"
+                }
+            }
+        }
+        return $packagesWinget, $packagesChoco
         }.Invoke($PackagesToInstall)
-        try{
+
+        try {
             $sync.ProcessRunning = $true
 
             # Install all selected programs in new window
-            if($packagesWinget.Count -gt 0){
-                Install-WinUtilProgramWinget -ProgramsToInstall $packagesWinget -Manage "Uninstalling"
+            if($packagesWinget.Count -gt 0) {
+                Install-WinUtilProgramWinget -Action Uninstall -Programs $packagesWinget
             }
-            if($packagesChoco.Count -gt 0){
-                Install-WinUtilProgramChoco -ProgramsToInstall $packagesChoco -Manage "Uninstalling"
+            if($packagesChoco.Count -gt 0) {
+                Install-WinUtilProgramChoco -Action Uninstall -Programs $packagesChoco
             }
-
-            [System.Windows.MessageBox]::Show($Messageboxbody, $MessageboxTitle, $ButtonType, $MessageIcon)
 
             Write-Host "==========================================="
             Write-Host "--       Uninstalls have finished       ---"
             Write-Host "==========================================="
             $sync.form.Dispatcher.Invoke([action]{ Set-WinUtilTaskbaritem -state "None" -overlay "checkmark" })
-        }
-        Catch {
+        } catch {
             Write-Host "==========================================="
             Write-Host "Error: $_"
             Write-Host "==========================================="

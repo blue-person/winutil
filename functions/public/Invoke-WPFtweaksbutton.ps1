@@ -6,7 +6,7 @@ function Invoke-WPFtweaksbutton {
 
   #>
 
-  if($sync.ProcessRunning){
+  if($sync.ProcessRunning) {
     $msg = "[Invoke-WPFtweaksbutton] Install process is currently running."
     [System.Windows.MessageBox]::Show($msg, "Winutil", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
     return
@@ -16,7 +16,7 @@ function Invoke-WPFtweaksbutton {
 
   Set-WinUtilDNS -DNSProvider $sync["WPFchangedns"].text
 
-  if ($tweaks.count -eq 0 -and  $sync["WPFchangedns"].text -eq "Default"){
+  if ($tweaks.count -eq 0 -and  $sync["WPFchangedns"].text -eq "Default") {
     $msg = "Please check the tweaks you wish to perform."
     [System.Windows.MessageBox]::Show($msg, "Winutil", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
     return
@@ -24,26 +24,29 @@ function Invoke-WPFtweaksbutton {
 
   Write-Debug "Number of tweaks to process: $($Tweaks.Count)"
 
-  Invoke-WPFRunspace -ArgumentList $Tweaks -DebugPreference $DebugPreference -ScriptBlock {
-    param($Tweaks, $DebugPreference)
+  # The leading "," in the ParameterList is nessecary because we only provide one argument and powershell cannot be convinced that we want a nested loop with only one argument otherwise
+  $tweaksHandle = Invoke-WPFRunspace -ParameterList @(,("tweaks",$tweaks)) -DebugPreference $DebugPreference -ScriptBlock {
+    param(
+      $tweaks,
+      $DebugPreference
+      )
     Write-Debug "Inside Number of tweaks to process: $($Tweaks.Count)"
 
     $sync.ProcessRunning = $true
 
-    if ($Tweaks.count -eq 1){
+    if ($Tweaks.count -eq 1) {
         $sync.form.Dispatcher.Invoke([action]{ Set-WinUtilTaskbaritem -state "Indeterminate" -value 0.01 -overlay "logo" })
     } else {
         $sync.form.Dispatcher.Invoke([action]{ Set-WinUtilTaskbaritem -state "Normal" -value 0.01 -overlay "logo" })
     }
-    $cnt = 0
     # Execute other selected tweaks
-    foreach ($tweak in $Tweaks) {
-      Write-Debug "This is a tweak to run $tweak count: $cnt"
-      Invoke-WinUtilTweaks $tweak
-      $cnt += 1
-      $sync.form.Dispatcher.Invoke([action]{ Set-WinUtilTaskbaritem -value ($cnt/$Tweaks.Count) })
-    }
 
+    for ($i = 0; $i -lt $Tweaks.Count; $i++) {
+      Set-WinUtilProgressBar -Label "Applying $($tweaks[$i])" -Percent ($i / $tweaks.Count * 100)
+      Invoke-WinUtilTweaks $tweaks[$i]
+      $sync.form.Dispatcher.Invoke([action]{ Set-WinUtilTaskbaritem -value ($i/$Tweaks.Count) })
+    }
+    Set-WinUtilProgressBar -Label "Tweaks finished" -Percent 100
     $sync.ProcessRunning = $false
     $sync.form.Dispatcher.Invoke([action]{ Set-WinUtilTaskbaritem -state "None" -overlay "checkmark" })
     Write-Host "================================="

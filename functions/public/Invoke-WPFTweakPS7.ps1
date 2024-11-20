@@ -17,7 +17,7 @@ function Invoke-WPFTweakPS7{
                 Write-Host "Powershell 7 is already installed."
             } else {
                 Write-Host "Installing Powershell 7..."
-                Install-WinUtilProgramWinget -ProgramsToInstall @(@{"winget"="Microsoft.PowerShell"})
+                Install-WinUtilProgramWinget -Action Install -Programs @("Microsoft.PowerShell")
             }
             $targetTerminalName = "PowerShell"
         }
@@ -26,13 +26,13 @@ function Invoke-WPFTweakPS7{
         }
     }
     # Check if the Windows Terminal is installed and return if not (Prerequisite for the following code)
-    if (-not (Get-Command "wt" -ErrorAction SilentlyContinue)){
+    if (-not (Get-Command "wt" -ErrorAction SilentlyContinue)) {
         Write-Host "Windows Terminal not installed. Skipping Terminal preference"
         return
     }
     # Check if the Windows Terminal settings.json file exists and return if not (Prereqisite for the following code)
     $settingsPath = "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
-    if (-not (Test-Path -Path $settingsPath)){
+    if (-not (Test-Path -Path $settingsPath)) {
         Write-Host "Windows Terminal Settings file not found at $settingsPath"
         return
     }

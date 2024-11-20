@@ -6,7 +6,7 @@ function Invoke-WPFInstall {
 
     #>
 
-    if($sync.ProcessRunning){
+    if($sync.ProcessRunning) {
         $msg = "[Invoke-WPFInstall] An Install process is currently running."
         [System.Windows.MessageBox]::Show($msg, "Winutil", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
         return
@@ -19,48 +19,58 @@ function Invoke-WPFInstall {
         [System.Windows.MessageBox]::Show($WarningMsg, $AppTitle, [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
         return
     }
-
-
-    Invoke-WPFRunspace -ArgumentList $PackagesToInstall -DebugPreference $DebugPreference -ScriptBlock {
-        param($PackagesToInstall, $DebugPreference)
-        if ($PackagesToInstall.count -eq 1){
+    $ChocoPreference = $($sync.WPFpreferChocolatey.IsChecked)
+    $installHandle = Invoke-WPFRunspace -ParameterList @(("PackagesToInstall", $PackagesToInstall),("ChocoPreference", $ChocoPreference)) -DebugPreference $DebugPreference -ScriptBlock {
+        param($PackagesToInstall, $ChocoPreference, $DebugPreference)
+        if ($PackagesToInstall.count -eq 1) {
             $sync.form.Dispatcher.Invoke([action]{ Set-WinUtilTaskbaritem -state "Indeterminate" -value 0.01 -overlay "logo" })
         } else {
             $sync.form.Dispatcher.Invoke([action]{ Set-WinUtilTaskbaritem -state "Normal" -value 0.01 -overlay "logo" })
         }
         $packagesWinget, $packagesChoco = {
-            $packagesWinget = [System.Collections.Generic.List`1[System.Object]]::new()
-            $packagesChoco = [System.Collections.Generic.List`1[System.Object]]::new()
-            foreach ($package in $PackagesToInstall) {
+            $packagesWinget = [System.Collections.ArrayList]::new()
+            $packagesChoco = [System.Collections.ArrayList]::new()
+
+        foreach ($package in $PackagesToInstall) {
+            if ($ChocoPreference) {
+                if ($package.choco -eq "na") {
+                    $packagesWinget.add($package.winget)
+                    Write-Host "Queueing $($package.winget) for Winget install"
+                } else {
+                    $null = $packagesChoco.add($package.choco)
+                    Write-Host "Queueing $($package.choco) for Chocolatey install"
+                }
+            }
+            else {
                 if ($package.winget -eq "na") {
-                    $packagesChoco.add($package)
+                    $packagesChoco.add($package.choco)
                     Write-Host "Queueing $($package.choco) for Chocolatey install"
                 } else {
-                    $packagesWinget.add($package)
+                    $null = $packagesWinget.add($($package.winget))
                     Write-Host "Queueing $($package.winget) for Winget install"
                 }
             }
-            return $packagesWinget, $packagesChoco
+        }
+        return $packagesWinget, $packagesChoco
         }.Invoke($PackagesToInstall)
 
-        try{
+        try {
             $sync.ProcessRunning = $true
             $errorPackages = @()
-            if($packagesWinget.Count -gt 0){
+            if($packagesWinget.Count -gt 0) {
                 Install-WinUtilWinget
-                $errorPackages += Install-WinUtilProgramWinget -ProgramsToInstall $packagesWinget
-                $errorPackages| ForEach-Object {if($_.choco -ne "na") {$packagesChoco += $_}}
+                Install-WinUtilProgramWinget -Action Install -Programs $packagesWinget
+
             }
-            if($packagesChoco.Count -gt 0){
+            if($packagesChoco.Count -gt 0) {
                 Install-WinUtilChoco
-                Install-WinUtilProgramChoco -ProgramsToInstall $packagesChoco
+                Install-WinUtilProgramChoco -Action Install -Programs $packagesChoco
             }
             Write-Host "==========================================="
             Write-Host "--      Installs have finished          ---"
             Write-Host "==========================================="
             $sync.form.Dispatcher.Invoke([action]{ Set-WinUtilTaskbaritem -state "None" -overlay "checkmark" })
-        }
-        Catch {
+        } catch {
             Write-Host "==========================================="
             Write-Host "Error: $_"
             Write-Host "==========================================="

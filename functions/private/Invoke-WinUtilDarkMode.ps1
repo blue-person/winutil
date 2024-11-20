@@ -9,12 +9,11 @@ Function Invoke-WinUtilDarkMode {
 
     #>
     Param($DarkMoveEnabled)
-    Try{
-        if ($DarkMoveEnabled -eq $false){
+    try {
+        if ($DarkMoveEnabled -eq $false) {
             Write-Host "Enabling Dark Mode"
             $DarkMoveValue = 0
-        }
-        else {
+        } else {
             Write-Host "Disabling Dark Mode"
             $DarkMoveValue = 1
         }
@@ -22,14 +21,16 @@ Function Invoke-WinUtilDarkMode {
         $Path = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize"
         Set-ItemProperty -Path $Path -Name AppsUseLightTheme -Value $DarkMoveValue
         Set-ItemProperty -Path $Path -Name SystemUsesLightTheme -Value $DarkMoveValue
-    }
-    Catch [System.Security.SecurityException] {
+        Invoke-WinUtilExplorerRefresh
+        # Update Winutil Theme if the Theme Button shows the Icon for Auto
+        if ($sync.ThemeButton.Content -eq [char]0xF08C) {
+            Invoke-WinutilThemeChange -theme "Auto"
+        }
+    } catch [System.Security.SecurityException] {
         Write-Warning "Unable to set $Path\$Name to $Value due to a Security Exception"
-    }
-    Catch [System.Management.Automation.ItemNotFoundException] {
+    } catch [System.Management.Automation.ItemNotFoundException] {
         Write-Warning $psitem.Exception.ErrorRecord
-    }
-    Catch{
+    } catch {
         Write-Warning "Unable to set $Name due to unhandled exception"
         Write-Warning $psitem.Exception.StackTrace
     }
